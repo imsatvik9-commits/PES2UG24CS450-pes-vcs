@@ -135,11 +135,9 @@ int index_status(const Index *index) {
 //
 // Returns 0 on success, -1 on error.
 int index_load(Index *index) {
-    // TODO: Implement index loading
-    int index_load(Index *index) {
     FILE *f = fopen(".pes/index", "r");
 
-    // If file doesn't exist → empty index
+    // If index file doesn't exist → empty index
     if (!f) {
         index->count = 0;
         return 0;
@@ -149,7 +147,6 @@ int index_load(Index *index) {
 
     while (index->count < MAX_INDEX_ENTRIES) {
         IndexEntry *e = &index->entries[index->count];
-
         char hex[HASH_HEX_SIZE + 1];
 
         int ret = fscanf(f, "%o %64s %ld %ld %s",
@@ -161,11 +158,11 @@ int index_load(Index *index) {
 
         if (ret != 5) break;
 
-        
+        // Even if parsing fails → don't crash
         if (hex_to_hash(hex, &e->hash) < 0) {
-            index->count = 0;
             fclose(f);
-            return 0;   // treat as empty instead of error
+            index->count = 0;
+            return 0;
         }
 
         index->count++;
