@@ -17,6 +17,7 @@
 #include <unistd.h>
 #include <openssl/sha.h>
 
+#include <errno.h>   
 // ─── PROVIDED ────────────────────────────────────────────────────────────────
 
 void hash_to_hex(const ObjectID *id, char *hex_out) {
