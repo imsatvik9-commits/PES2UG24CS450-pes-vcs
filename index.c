@@ -14,7 +14,7 @@
 //
 // PROVIDED functions: index_find, index_remove, index_status
 // TODO functions:     index_load, index_save, index_add
-
+#inlcude "object.h"
 #include "index.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -137,7 +137,6 @@ int index_status(const Index *index) {
 int index_load(Index *index) {
     FILE *f = fopen(".pes/index", "r");
 
-    // If index file doesn't exist → empty index
     if (!f) {
         index->count = 0;
         return 0;
@@ -149,7 +148,7 @@ int index_load(Index *index) {
         IndexEntry *e = &index->entries[index->count];
         char hex[HASH_HEX_SIZE + 1];
 
-        int ret = fscanf(f, "%o %64s %ld %ld %s",
+        int ret = fscanf(f, "%o %64s %ld %u %s",
                          &e->mode,
                          hex,
                          &e->mtime_sec,
@@ -158,7 +157,6 @@ int index_load(Index *index) {
 
         if (ret != 5) break;
 
-        // Even if parsing fails → don't crash
         if (hex_to_hash(hex, &e->hash) < 0) {
             fclose(f);
             index->count = 0;
