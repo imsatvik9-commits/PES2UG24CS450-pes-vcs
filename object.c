@@ -132,6 +132,8 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
         return -1;
     }
     *slash = '\0';
+    mkdir(".pes", 0755);
+mkdir(".pes/objects", 0755);
 
     mkdir(dir, 0755);
 
@@ -162,9 +164,11 @@ if (fd < 0) {
     close(fd);
 
     if (rename(temp_path, path) != 0) {
-        free(full_obj);
-        return -1;
-    }
+    perror("rename failed"); 
+    unlink(temp_path);       
+    free(full_obj);
+    return -1;
+}
 
     int dir_fd = open(dir, O_RDONLY);
     if (dir_fd >= 0) {
