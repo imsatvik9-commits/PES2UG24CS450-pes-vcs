@@ -171,7 +171,5 @@ int tree_from_index(ObjectID *id_out) {
     free(data);
     return 0;
 }
-    // (See Lab Appendix for logical steps)
-    (void)id_out;
-    return -1;
+   
 }
