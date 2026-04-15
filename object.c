@@ -135,13 +135,17 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 
     mkdir(dir, 0755);
 
-    char temp_path[512];
-    if (snprintf(temp_path, sizeof(temp_path), "%s/tmpXXXXXX", dir) >= (int)sizeof(temp_path)) {
-        free(full_obj);
-        return -1;
-    }
+   char temp_path[512];
+if (snprintf(temp_path, sizeof(temp_path), "%s/tmpfileXXXXXX", dir) >= (int)sizeof(temp_path)) {
+    free(full_obj);
+    return -1;
+}
 
-    int fd = mkstemp(temp_path);
+int fd = mkstemp(temp_path);
+if (fd < 0) {
+    free(full_obj);
+    return -1;
+}
     if (fd < 0) {
         free(full_obj);
         return -1;
