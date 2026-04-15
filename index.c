@@ -139,7 +139,7 @@ int index_load(Index *index) {
     int index_load(Index *index) {
     FILE *f = fopen(".pes/index", "r");
 
-    // If index doesn't exist → treat as empty
+    // If file doesn't exist → empty index
     if (!f) {
         index->count = 0;
         return 0;
@@ -152,7 +152,7 @@ int index_load(Index *index) {
 
         char hex[HASH_HEX_SIZE + 1];
 
-        int ret = fscanf(f, "%o %64s %ld %ld %s\n",
+        int ret = fscanf(f, "%o %64s %ld %ld %s",
                          &e->mode,
                          hex,
                          &e->mtime_sec,
@@ -161,9 +161,11 @@ int index_load(Index *index) {
 
         if (ret != 5) break;
 
+        
         if (hex_to_hash(hex, &e->hash) < 0) {
+            index->count = 0;
             fclose(f);
-            return -1;
+            return 0;   // treat as empty instead of error
         }
 
         index->count++;
