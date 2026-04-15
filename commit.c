@@ -240,6 +240,5 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     return 0;
 }
     // (See Lab Appendix for logical steps)
-    (void)message; (void)commit_id_out;
-    return -1;
+    
 }
