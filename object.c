@@ -162,12 +162,15 @@ if (fd < 0) {
 
     fsync(fd);
     close(fd);
-
     if (rename(temp_path, path) != 0) {
-    perror("rename failed"); 
-    unlink(temp_path);       
+    perror("RENAME ERROR");
+    printf("temp_path: %s\n", temp_path);
+    printf("final_path: %s\n", path);
+    unlink(temp_path);
     free(full_obj);
     return -1;
+}
+
 }
 
     int dir_fd = open(dir, O_RDONLY);
