@@ -197,9 +197,9 @@ int index_save(const Index *index) {
     FILE *f = fopen(temp_path, "w");
     if (!f) return -1;
 
-    // Sort entries
     Index sorted = *index;
-    qsort(sorted.entries, sorted.count, sizeof(IndexEntry), compare_entries);
+    qsort(sorted.entries, sorted.count, sizeof(IndexEntry),
+          (int (*)(const void *, const void *))strcmp);
 
     for (int i = 0; i < sorted.count; i++) {
         const IndexEntry *e = &sorted.entries[i];
@@ -207,7 +207,7 @@ int index_save(const Index *index) {
         char hex[HASH_HEX_SIZE + 1];
         hash_to_hex(&e->hash, hex);
 
-        fprintf(f, "%o %s %ld %ld %s\n",
+        fprintf(f, "%o %s %ld %u %s\n",
                 e->mode,
                 hex,
                 e->mtime_sec,
@@ -224,10 +224,6 @@ int index_save(const Index *index) {
 
     return 0;
 }
-    // (See Lab Appendix for logical steps)
-    (void)index;
-    return -1;
-}
 
 // Stage a file for the next commit.
 //
@@ -239,12 +235,9 @@ int index_save(const Index *index) {
 //
 // Returns 0 on success, -1 on error.
 int index_add(Index *index, const char *path) {
-    // TODO: Implement file staging
-    int index_add(Index *index, const char *path) {
     struct stat st;
     if (stat(path, &st) < 0) return -1;
 
-    // Read file contents
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
 
@@ -262,7 +255,6 @@ int index_add(Index *index, const char *path) {
 
     fclose(f);
 
-    // Write as blob
     ObjectID id;
     if (object_write(OBJ_BLOB, buffer, st.st_size, &id) < 0) {
         free(buffer);
@@ -271,13 +263,11 @@ int index_add(Index *index, const char *path) {
 
     free(buffer);
 
-    // Check if already exists
     IndexEntry *e = index_find(index, path);
 
     if (!e) {
         if (index->count >= MAX_INDEX_ENTRIES)
             return -1;
-
         e = &index->entries[index->count++];
     }
 
@@ -285,13 +275,9 @@ int index_add(Index *index, const char *path) {
     e->path[sizeof(e->path) - 1] = '\0';
 
     e->hash = id;
-    e->mode = 0100644; // regular file
+    e->mode = 0100644;
     e->mtime_sec = st.st_mtime;
     e->size = st.st_size;
 
     return index_save(index);
-}
-    // (See Lab Appendix for logical steps)
-    (void)index; (void)path;
-    return -1;
 }
