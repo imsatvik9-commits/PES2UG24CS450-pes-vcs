@@ -16,7 +16,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <openssl/sha.h>
-#include <errno.h>   
+#include<errno.h>
 
 // ─── Mode Constants ─────────────────────────────────────────────────────────
 
