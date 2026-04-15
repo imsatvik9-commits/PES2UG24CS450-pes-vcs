@@ -93,7 +93,13 @@ int object_exists(const ObjectID *id) {
 
 //
 // Returns 0 on success, -1 on error.
-int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
+
+// Read an object from the store.
+//
+// Steps:
+//   1. Build the file path from the hash using object_path()
+//   2. Open and read the entire file
+//   3. Parse the header to extract the type striint object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out) {
     const char *type_str;
     if (type == OBJ_BLOB) type_str = "blob";
     else if (type == OBJ_TREE) type_str = "tree";
@@ -132,22 +138,18 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
         return -1;
     }
     *slash = '\0';
-    mkdir(".pes", 0755);
-mkdir(".pes/objects", 0755);
 
+    mkdir(".pes", 0755);
+    mkdir(".pes/objects", 0755);
     mkdir(dir, 0755);
 
-   char temp_path[512];
-if (snprintf(temp_path, sizeof(temp_path), "%s/tmpfileXXXXXX", dir) >= (int)sizeof(temp_path)) {
-    free(full_obj);
-    return -1;
-}
+    char temp_path[512];
+    if (snprintf(temp_path, sizeof(temp_path), "%s/tmpfileXXXXXX", dir) >= (int)sizeof(temp_path)) {
+        free(full_obj);
+        return -1;
+    }
 
-int fd = mkstemp(temp_path);
-if (fd < 0) {
-    free(full_obj);
-    return -1;
-}
+    int fd = mkstemp(temp_path);
     if (fd < 0) {
         free(full_obj);
         return -1;
@@ -156,22 +158,19 @@ if (fd < 0) {
     ssize_t written = write(fd, full_obj, total_len);
     if (written != (ssize_t)total_len) {
         close(fd);
+        unlink(temp_path);
         free(full_obj);
         return -1;
     }
 
     fsync(fd);
     close(fd);
-    if (rename(temp_path, path) != 0) {
-    perror("RENAME ERROR");
-    printf("temp_path: %s\n", temp_path);
-    printf("final_path: %s\n", path);
-    unlink(temp_path);
-    free(full_obj);
-    return -1;
-}
 
-}
+    if (rename(temp_path, path) != 0) {
+        unlink(temp_path);
+        free(full_obj);
+        return -1;
+    }
 
     int dir_fd = open(dir, O_RDONLY);
     if (dir_fd >= 0) {
@@ -183,13 +182,7 @@ if (fd < 0) {
 
     free(full_obj);
     return 0;
-}
-// Read an object from the store.
-//
-// Steps:
-//   1. Build the file path from the hash using object_path()
-//   2. Open and read the entire file
-//   3. Parse the header to extract the type string and size
+}ng and size
 //   4. Verify integrity: recompute the SHA-256 of the file contents
 //      and compare to the expected hash (from *id). Return -1 if mismatch.
 //   5. Set *type_out to the parsed ObjectType
