@@ -136,7 +136,10 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
     mkdir(dir, 0755);
 
     char temp_path[512];
-    snprintf(temp_path, sizeof(temp_path), "%s/tmpXXXXXX", dir);
+    if (snprintf(temp_path, sizeof(temp_path), "%s/tmpXXXXXX", dir) >= (int)sizeof(temp_path)) {
+        free(full_obj);
+        return -1;
+    }
 
     int fd = mkstemp(temp_path);
     if (fd < 0) {
@@ -144,7 +147,8 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
         return -1;
     }
 
-    if (write(fd, full_obj, total_len) != total_len) {
+    ssize_t written = write(fd, full_obj, total_len);
+    if (written != (ssize_t)total_len) {
         close(fd);
         free(full_obj);
         return -1;
@@ -211,7 +215,8 @@ int object_read(ObjectID id, void **data_out, size_t *len_out) {
         return -1;
     }
 
-    if (read(fd, full_obj, size) != size) {
+    ssize_t r = read(fd, full_obj, size);
+    if (r != size) {
         free(full_obj);
         close(fd);
         return -1;
