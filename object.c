@@ -121,9 +121,17 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
 
     strcpy(dir, path);
     char *slash = strrchr(dir, '/');
+    if (!slash) {
+        free(object_buf);
+        return -1;
+    }
     *slash = '\0';
 
-    mkdir(dir, 0755);
+    // create directory if needed
+    if (mkdir(dir, 0755) < 0 && errno != EEXIST) {
+        free(object_buf);
+        return -1;
+    }
 
     snprintf(temp, sizeof(temp), "%s.tmp", path);
 
@@ -133,11 +141,32 @@ int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out
         return -1;
     }
 
-    write(fd, object_buf, total_len);
-    fsync(fd);
+    ssize_t written = write(fd, object_buf, total_len);
+    if (written != (ssize_t)total_len) {
+        close(fd);
+        free(object_buf);
+        return -1;
+    }
+
+    if (fsync(fd) < 0) {
+        close(fd);
+        free(object_buf);
+        return -1;
+    }
+
     close(fd);
 
-    rename(temp, path);
+    if (rename(temp, path) < 0) {
+        free(object_buf);
+        return -1;
+    }
+
+    // fsync directory to persist rename
+    int dir_fd = open(dir, O_DIRECTORY);
+    if (dir_fd >= 0) {
+        fsync(dir_fd);
+        close(dir_fd);
+    }
 
     free(object_buf);
     return 0;
@@ -173,8 +202,17 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
     FILE *f = fopen(path, "rb");
     if (!f) return -1;
 
-    fseek(f, 0, SEEK_END);
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return -1;
+    }
+
     long file_size = ftell(f);
+    if (file_size < 0) {
+        fclose(f);
+        return -1;
+    }
+
     rewind(f);
 
     unsigned char *buffer = malloc(file_size);
@@ -183,29 +221,40 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
         return -1;
     }
 
-    fread(buffer, 1, file_size, f);
+    if (fread(buffer, 1, file_size, f) != (size_t)file_size) {
+        free(buffer);
+        fclose(f);
+        return -1;
+    }
+
     fclose(f);
 
+    // verify integrity
     ObjectID check;
     compute_hash(buffer, file_size, &check);
-/* Verify stored object was not corrupted */
     if (memcmp(check.hash, id->hash, HASH_SIZE) != 0) {
         free(buffer);
         return -1;
     }
 
+    // find header/data separator
     char *null_pos = memchr(buffer, '\0', file_size);
     if (!null_pos) {
         free(buffer);
         return -1;
     }
 
-    if (strncmp((char *)buffer, "blob", 4) == 0)
+    // parse type safely
+    if (strncmp((char *)buffer, "blob ", 5) == 0)
         *type_out = OBJ_BLOB;
-    else if (strncmp((char *)buffer, "tree", 4) == 0)
+    else if (strncmp((char *)buffer, "tree ", 5) == 0)
         *type_out = OBJ_TREE;
-    else
+    else if (strncmp((char *)buffer, "commit ", 7) == 0)
         *type_out = OBJ_COMMIT;
+    else {
+        free(buffer);
+        return -1;
+    }
 
     size_t header_len = (null_pos - (char *)buffer) + 1;
     *len_out = file_size - header_len;
